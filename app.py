@@ -79,7 +79,7 @@ YEARS = ["CY26", "CY27", "CY28", "CY29", "CY30"]
 # directory), so the app finds the file the same way whether it's launched
 # with `streamlit run app.py` from this folder or from somewhere else.
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-FOOTPRINT_FILE = os.path.join(APP_DIR, "Data", "Footprint_Rationalisation.xlsx")
+FOOTPRINT_FILE = os.path.join(APP_DIR, "Data", "Footprint_Rationalisation_New.xlsx")
 FOOTPRINT_SHEET = "Footprint rationalisation"
 
 # Fixed layout of the source blocks within the sheet (Excel row numbers).
