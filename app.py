@@ -63,7 +63,8 @@ Pipeline:
      top of what's already owned from prior years.
 
 Run with:  streamlit run app.py
-Requires: Footprint_Rationalisation.xlsx in the same folder as this script.
+Requires: Footprint_Rationalisation.xlsx inside a 'Data' subfolder next to this script,
+          i.e. <this script's folder>/Data/Footprint_Rationalisation.xlsx.
 """
 
 import os
@@ -74,7 +75,11 @@ st.set_page_config(page_title="Agovor Fleet Sizing Calculator", layout="wide")
 
 YEARS = ["CY26", "CY27", "CY28", "CY29", "CY30"]
 
-FOOTPRINT_FILE = "Footprint_Rationalisation.xlsx"
+# Resolve relative to this script's own location (not the current working
+# directory), so the app finds the file the same way whether it's launched
+# with `streamlit run app.py` from this folder or from somewhere else.
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+FOOTPRINT_FILE = os.path.join(APP_DIR, "Data", "Footprint_Rationalisation.xlsx")
 FOOTPRINT_SHEET = "Footprint rationalisation"
 
 # Fixed layout of the source blocks within the sheet (Excel row numbers).
@@ -121,8 +126,8 @@ st.header("01 · Budgeted hectares by region")
 
 if not os.path.exists(FOOTPRINT_FILE):
     st.error(
-        f"Could not find **{FOOTPRINT_FILE}** in the app's folder. "
-        f"Place the workbook there (containing a '{FOOTPRINT_SHEET}' tab) and rerun."
+        f"Could not find **{FOOTPRINT_FILE}**. Place the workbook (containing a "
+        f"'{FOOTPRINT_SHEET}' tab) in a **Data** subfolder next to this script and rerun."
     )
     st.stop()
 
@@ -313,7 +318,7 @@ def _regional_lm_per_ha(region: str) -> float:
 
 
 st.caption(
-    f"Read from **{FOOTPRINT_FILE}** ('{FOOTPRINT_SHEET}' tab) — hectares from rows "
+    f"Read from **Data/{os.path.basename(FOOTPRINT_FILE)}** ('{FOOTPRINT_SHEET}' tab) — hectares from rows "
     f"{FIRST_DATA_ROW}-{LAST_DATA_ROW}, lineal metres read directly from the workbook's own "
     f"computed Lineal Metres block (rows {LM_FIRST_DATA_ROW}-{LM_LAST_DATA_ROW}), so any "
     "tunnel-specific lineal-metres/ha rate already baked into that workbook is picked up "
