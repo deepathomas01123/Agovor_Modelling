@@ -79,8 +79,30 @@ YEARS = ["CY26", "CY27", "CY28", "CY29", "CY30"]
 # directory), so the app finds the file the same way whether it's launched
 # with `streamlit run app.py` from this folder or from somewhere else.
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-FOOTPRINT_FILE = os.path.join(APP_DIR, "Data", "Footprint_Rationalisation_New.xlsx")
+DATA_DIR = os.path.join(APP_DIR, "Data")
 FOOTPRINT_SHEET = "Footprint rationalisation"
+
+# Look for the workbook by its expected name first; if that's not there,
+# fall back to any single .xlsx in Data/ so a renamed file doesn't break
+# the app. If there's more than one candidate, the exact name is required.
+_PREFERRED_NAMES = ["Footprint_Rationalisation.xlsx", "Footprint_Rationalisation_New.xlsx"]
+
+
+def _resolve_footprint_file() -> str:
+    for name in _PREFERRED_NAMES:
+        candidate = os.path.join(DATA_DIR, name)
+        if os.path.exists(candidate):
+            return candidate
+    if os.path.isdir(DATA_DIR):
+        xlsx_files = [f for f in os.listdir(DATA_DIR) if f.lower().endswith(".xlsx") and not f.startswith("~$")]
+        if len(xlsx_files) == 1:
+            return os.path.join(DATA_DIR, xlsx_files[0])
+    # Nothing found / ambiguous -- return the primary expected path so the
+    # existing "file not found" error message below fires with a sensible name.
+    return os.path.join(DATA_DIR, _PREFERRED_NAMES[0])
+
+
+FOOTPRINT_FILE = _resolve_footprint_file()
 
 # Fixed layout of the source blocks within the sheet (Excel row numbers).
 # These match the standard 'Footprint rationalisation' tab layout --
@@ -125,9 +147,17 @@ st.markdown(
 st.header("01 · Budgeted hectares by region")
 
 if not os.path.exists(FOOTPRINT_FILE):
+    _found = []
+    if os.path.isdir(DATA_DIR):
+        _found = [f for f in os.listdir(DATA_DIR) if f.lower().endswith(".xlsx")]
     st.error(
-        f"Could not find **{FOOTPRINT_FILE}**. Place the workbook (containing a "
-        f"'{FOOTPRINT_SHEET}' tab) in a **Data** subfolder next to this script and rerun."
+        f"Could not find the footprint workbook in **Data/** (looked for "
+        f"{', '.join(_PREFERRED_NAMES)}). "
+        + (f"Files actually present in Data/: {', '.join(_found)}. "
+           "If there's more than one .xlsx there, rename the one to use to "
+           f"one of: {', '.join(_PREFERRED_NAMES)}."
+           if _found else
+           f"The Data/ folder doesn't exist or is empty at {DATA_DIR}.")
     )
     st.stop()
 
@@ -382,7 +412,7 @@ mode = st.radio(
 )
 
 st.subheader("Mowing cadence")
-cad1, cad2, cad3 = st.columns(3)
+cad1, cad2, cad3, cad4 = st.columns(4)
 rotation_days = cad1.number_input(
     "Mowing rotation (days)",
     min_value=1, value=7, step=1,
@@ -399,21 +429,31 @@ mow_spray_ratio_text = cad2.text_input(
          "2 days (spraying happens half as often as mowing).",
 )
 
-double_shift = cad3.checkbox(
-    "Double Shift (Day + Night operation)",
-    value=False,
-    help="Unchecked = Single Shift (mornings only) = 7 hrs/device/day. "
-         "Checked = Double Shift (day + night) = 14 hrs/device/day. "
-         "This directly sets Hrs/device/day for both mowing and spraying below "
-         "— it's no longer manually editable, since it's fully determined by "
-         "the shift setting.",
+base_hours_per_day = cad3.number_input(
+    "Hrs / device / day (single shift)",
+    min_value=0.5, value=7.0, step=0.5,
+    help="Hours one device operates per day on a single shift. This is now an editable "
+         "input rather than a fixed 7 hrs — set it to whatever a single shift actually "
+         "runs at your site. Double Shift below doubles whatever value you enter here.",
 )
 
-device_hours_per_day = 14.0 if double_shift else 7.0
+double_shift = cad4.checkbox(
+    "Double Shift (Day + Night operation)",
+    value=False,
+    help="Unchecked = Single Shift = the 'Hrs/device/day (single shift)' value entered above. "
+         "Checked = Double Shift (day + night) = that value DOUBLED. "
+         "This directly sets Hrs/device/day for both mowing and spraying below "
+         "— it's no longer separately editable per task, since it's fully determined by "
+         "the base hours input and the shift setting.",
+)
+
+device_hours_per_day = base_hours_per_day * 2 if double_shift else base_hours_per_day
 
 st.caption(
     f"**{'Double Shift' if double_shift else 'Single Shift'}** selected → "
-    f"**{device_hours_per_day:g} hrs/device/day**, applied to BOTH mowing and spraying "
+    f"**{base_hours_per_day:g} hrs/device/day** (single shift)"
+    + (f" × 2 = **{device_hours_per_day:g} hrs/device/day**" if double_shift else "")
+    + ", applied to BOTH mowing and spraying "
     "independently below (i.e. mowing gets its own full "
     f"{device_hours_per_day:g} hours and spraying gets its own full "
     f"{device_hours_per_day:g} hours, on their respective scheduled days — this is NOT "
