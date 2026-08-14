@@ -74,7 +74,7 @@ st.set_page_config(page_title="Agovor Fleet Sizing Calculator", layout="wide")
 
 YEARS = ["CY26", "CY27", "CY28", "CY29", "CY30"]
 
-FOOTPRINT_FILE = "Footprint_Rationalisation_New.xlsx"
+FOOTPRINT_FILE = "Footprint_Rationalisation.xlsx"
 FOOTPRINT_SHEET = "Footprint rationalisation"
 
 # Fixed layout of the source blocks within the sheet (Excel row numbers).
